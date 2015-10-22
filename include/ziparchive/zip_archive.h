@@ -151,6 +151,10 @@ int32_t StartIteration(ZipArchiveHandle handle, void** cookie_ptr,
  */
 int32_t Next(void* cookie, ZipEntry* data, ZipEntryName *name);
 
+#ifdef ZIP_NO_INTEGRITY
+int32_t NextNoIntegrity(void* cookie, ZipEntry* data, ZipEntryName *name);
+#endif
+
 /*
  * Uncompress and write an entry to an open file identified by |fd|.
  * |entry->uncompressed_length| bytes will be written to the file at

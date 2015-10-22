@@ -31,6 +31,9 @@ LOCAL_MODULE:= libziparchive
 
 LOCAL_C_INCLUDES += ${includes}
 LOCAL_CFLAGS := -Werror
+ifeq ($(ZIP_OPTIMIZATION_NO_INTEGRITY),true)
+	LOCAL_CFLAGS += -DZIP_NO_INTEGRITY
+endif
 include $(BUILD_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
@@ -45,6 +48,9 @@ LOCAL_CFLAGS := -Werror
 ifneq ($(strip $(USE_MINGW)),)
 	LOCAL_CFLAGS += -mno-ms-bitfields
 endif
+ifeq ($(ZIP_OPTIMIZATION_NO_INTEGRITY),true)
+	LOCAL_CFLAGS += -DZIP_NO_INTEGRITY
+endif
 LOCAL_MULTILIB := both
 include $(BUILD_HOST_STATIC_LIBRARY)
 
@@ -55,6 +61,9 @@ LOCAL_CFLAGS += \
     -DGTEST_OS_LINUX_ANDROID \
     -DGTEST_HAS_STD_STRING \
     -Werror
+ifeq ($(ZIP_OPTIMIZATION_NO_INTEGRITY),true)
+	LOCAL_CFLAGS += -DZIP_NO_INTEGRITY
+endif
 LOCAL_SRC_FILES := zip_archive_test.cc
 LOCAL_SHARED_LIBRARIES := liblog
 LOCAL_STATIC_LIBRARIES := libziparchive libz libgtest libgtest_main libutils
@@ -67,6 +76,9 @@ LOCAL_CFLAGS += \
     -DGTEST_OS_LINUX \
     -DGTEST_HAS_STD_STRING \
     -Werror
+ifeq ($(ZIP_OPTIMIZATION_NO_INTEGRITY),true)
+	LOCAL_CFLAGS += -DZIP_NO_INTEGRITY
+endif
 LOCAL_SRC_FILES := zip_archive_test.cc
 LOCAL_STATIC_LIBRARIES := libziparchive-host \
 	libz \
