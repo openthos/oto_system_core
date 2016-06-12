@@ -943,14 +943,44 @@ int do_rmdir(int nargs, char **args)
     return rmdir(args[1]);
 }
 
+// read persist property from /data/property directly, because it maybe has not loaded
+// if the file not found, try to call __property_get, the default value could be saved
+// into /default.prop
+static int persist_property_get(const char *name, char *val)
+{
+    const char *filename_template = "/data/property/%s";
+    size_t max_file_name_len = strlen(filename_template) + PROP_NAME_MAX;
+    char filename[max_file_name_len];
+    char *line = NULL;
+    size_t len;
+    snprintf(filename, max_file_name_len, filename_template, name);
+
+    if (access(filename, 0) == 0) {
+        FILE *fp = fopen(filename, "r+");
+        if (fp == NULL) {
+            ERROR("failed to read file for property:%s\n", filename);
+            return 0;
+        }
+
+        if (getline(&line, &len, fp) == -1) {
+            len = 0;
+        } else {
+            for (len = 0; *(line+len) != '\n' && *(line+len) != 0; len++);
+            *(line + len) = '\0';
+            strncpy(val, line, PROP_VALUE_MAX);
+            free(line);
+        }
+        fclose(fp);
+        return len;
+    }
+
+    return __property_get(name, val);
+}
 int do_sysclktz(int nargs, char **args)
 {
     struct timezone tz;
     struct timeval tv;
     struct tm tm;
-    FILE *fp;
-    char *line = NULL;
-    size_t len = 0;
     char hwtime_mode[PROP_VALUE_MAX];
     time_t t;
 
@@ -961,17 +991,15 @@ int do_sysclktz(int nargs, char **args)
     memset(&tv, 0, sizeof(tv));
     memset(&tm, 0, sizeof(tm));
 
-    if (!strcmp(args[1], "0")) {
-        tz.tz_minuteswest = atoi(args[1]);
-        if (settimeofday(NULL, &tz))
-            return -1;
-        return 0;
+    INFO("sysclktz: the arg %s is ignored, only persist.rtc_local_time matters\n", args[1]);
+
+    if (gettimeofday(&tv, NULL)) {
+        ERROR("sysclktz: failed to call gettimeofday");
+        return -1;
     }
 
-    if (gettimeofday(&tv, NULL))
-        return -1;
-    if (property_get("ro.rtc_local_time", hwtime_mode) && !strcmp(hwtime_mode, "1")
-                    && !strcmp(args[1], "1")) {
+    if (persist_property_get("persist.rtc_local_time", hwtime_mode) && !strcmp(hwtime_mode, "1")) {
+        char timezone_prop[PROP_VALUE_MAX];
 
         /* Notify kernel that hwtime use local time */
         write_file("/sys/class/misc/alarm/rtc_local_time",
@@ -981,40 +1009,36 @@ int do_sysclktz(int nargs, char **args)
          * and saved system zone in case of network not
          * available and auto syncing time not available.
          */
-        if (access(TIMEZONE, 0) == 0) {
-            fp = fopen(TIMEZONE, "r+");
-            if (fp == NULL)
-                return -1;
 
-            if (getline(&line, &len, fp) == -1)
-                tz.tz_minuteswest = 0;
-            else {
-                /* Hack to get timezone. */
-                for (len = 0; *(line+len) != '\n' && *(line+len) != 0; len++);
-                *(line+len) = '\0';
-                property_set("persist.sys.timezone", line);
-                t = tv.tv_sec;
-                localtime_r(&t, &tm);
-                tz.tz_minuteswest = -(tm.tm_gmtoff / 60);
-            }
-            free(line);
-            fclose(fp);
-        }
-        else
+        if (persist_property_get("persist.sys.timezone", timezone_prop)) {
+            INFO("sysclktz: persist.sys.timezone: %s\n", timezone_prop);
+            // localtime_r need the property, we need to set it
+            property_set("persist.sys.timezone", timezone_prop);
+            t = tv.tv_sec;
+            localtime_r(&t, &tm);
+            tz.tz_minuteswest = -(tm.tm_gmtoff / 60);
+            INFO("sysclktz: tz.tz_minuteswest: %d\n", tz.tz_minuteswest);
+        } else {
+            INFO("sysclktz: persist.sys.timezone not found\n");
             tz.tz_minuteswest = 0;
+        }
 
         /*
          * At this moment, system time should be local
          * time too, set it back to utc which linux required.
          */
         tv.tv_sec += tz.tz_minuteswest * 60;
-        if (settimeofday(&tv, &tz))
+        if (settimeofday(&tv, &tz)) {
+            ERROR("sysclktz: failed to call settimeofdays\n");
             return -1;
+        }
     } else {
         return -1;
     }
+
     return 0;
 }
+
 
 int do_write(int nargs, char **args)
 {
