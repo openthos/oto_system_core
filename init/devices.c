@@ -994,8 +994,8 @@ static int load_firmware(int fw_fd, int loading_fd, int data_fd)
         }
 
         len_to_copy -= nr;
+        ssize_t nw = 0;
         while (nr > 0) {
-            ssize_t nw = 0;
 
             nw = write(data_fd, buf + nw, nr);
             if(nw <= 0) {
