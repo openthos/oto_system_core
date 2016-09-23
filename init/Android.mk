@@ -18,6 +18,7 @@ LOCAL_SRC_FILES:= \
 	watchdogd.c
 
 LOCAL_CFLAGS    += -Wno-unused-parameter
+LOCAL_CFLAGS    += -DTARGET_PRODUCT=\"$(TARGET_PRODUCT)\"
 
 ifeq ($(strip $(INIT_BOOTCHART)),true)
 LOCAL_SRC_FILES += bootchart.c

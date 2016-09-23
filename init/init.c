@@ -70,7 +70,7 @@ static int   bootchart_count;
 
 static char console[32];
 static char bootmode[32];
-static char hardware[32];
+static char hardware[32] = TARGET_PRODUCT;
 static unsigned revision = 0;
 static char qemu[32];
 
