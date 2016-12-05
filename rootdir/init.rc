@@ -85,8 +85,12 @@ on init
     mount tmpfs tmpfs /mnt/asec mode=0755,gid=1000
 
     # Filesystem image public mount points.
-    mkdir /mnt/obb 0766 root system
+    mkdir /mnt/obb 0700 root system
     mount tmpfs tmpfs /mnt/obb mode=0755,gid=1000
+
+    # public mount points.
+    mkdir /mnt/tmp 0777 root system
+    mount tmpfs tmpfs /mnt/tmp mode=0777,gid=1000
 
     # memory control cgroup
     mkdir /dev/memcg 0700 root system
