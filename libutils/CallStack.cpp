@@ -24,6 +24,10 @@
 
 #include <backtrace/Backtrace.h>
 
+extern "C" void trigger_callstack() {
+    android::CallStack stack("OPENTHOS");
+}
+
 namespace android {
 
 CallStack::CallStack() {
