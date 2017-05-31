@@ -461,6 +461,7 @@ on property:vold.decrypt=trigger_shutdown_framework
     class_reset main
 
 on property:sys.powerctl=*
+    exec /system/bin/sh /system/etc/overlayfs.sh
     powerctl ${sys.powerctl}
 
 # system server cannot write to /proc/sys files,
