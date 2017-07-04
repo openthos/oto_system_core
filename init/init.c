@@ -724,6 +724,7 @@ static int console_init_action(int nargs, char **args)
             break;
     }
     if (fd >= 0) {
+#if 0
         have_console = 1;
         const char *msg =
         "\033[9;0]\n"
@@ -742,6 +743,7 @@ static int console_init_action(int nargs, char **args)
         "\n"
         "             A N D R O I D ";
         write(fd, msg, strlen(msg));
+#endif
         close(fd);
     } else {
         ERROR("Gave up trying to open console %s\n", console_name);
