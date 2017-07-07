@@ -25,6 +25,10 @@ LOCAL_SRC_FILES += bootchart.c
 LOCAL_CFLAGS    += -DBOOTCHART=1
 endif
 
+ifeq (user,$(TARGET_BUILD_VARIANT))
+LOCAL_CFLAGS += -DDISALLOW_CONSOLE=1
+endif
+
 # disable selinux for user 
 #ifneq (,$(filter userdebug eng,$(TARGET_BUILD_VARIANT)))
 LOCAL_CFLAGS += -DALLOW_LOCAL_PROP_OVERRIDE=1 -DALLOW_DISABLE_SELINUX=1

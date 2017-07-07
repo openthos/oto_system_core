@@ -724,7 +724,7 @@ static int console_init_action(int nargs, char **args)
             break;
     }
     if (fd >= 0) {
-#if 0
+#ifndef DISALLOW_CONSOLE
         have_console = 1;
         const char *msg =
         "\033[9;0]\n"
