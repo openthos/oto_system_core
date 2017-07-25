@@ -643,7 +643,3 @@ service pre-recovery /system/bin/uncrypt
     class main
     disabled
     oneshot
-
-service pre-install /preinstall.sh
-    class main
-    oneshot
