@@ -39,6 +39,7 @@
 
 #include "init.h"
 #include "log.h"
+#include "property_service.h"
 #include "util.h"
 
 /*
@@ -430,6 +431,10 @@ void get_hardware_name(char *hardware, unsigned int *revision)
 
     /* Hardware string was provided on kernel command line */
     if (hardware[0])
+        return;
+
+    /* Hardware string was provided on ro.hardware property */
+    if (__property_get("ro.hardware", hardware))
         return;
 
     fd = open(cpuinfo, O_RDONLY);
