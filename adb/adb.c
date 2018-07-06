@@ -1362,7 +1362,7 @@ int adb_main(int is_daemon, int server_port)
         exit(1);
     }
 
-    /* don't listen on a port (default 5037) if running in secure mode */
+    /* don't listen on a port (default 5137) if running in secure mode */
     /* don't run as root if we are running in secure mode */
     if (should_drop_privileges()) {
         drop_capabilities_bounding_set_if_needed();
