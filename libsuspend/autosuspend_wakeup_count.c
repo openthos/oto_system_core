@@ -46,6 +46,7 @@
 
 static const char *default_sleep_state = "mem";
 static const char *fallback_sleep_state = "freeze";
+static char sleep_state[PROPERTY_VALUE_MAX] = "";
 
 static int uinput_fd = -1;
 static int state_fd;
@@ -221,12 +222,8 @@ static bool sleep_state_available(const char *state)
 
 static const char *get_sleep_state()
 {
-    static char sleep_state[PROPERTY_VALUE_MAX] = "";
-
     if (!sleep_state[0]) {
-        if (property_get("sleep.state", sleep_state, NULL) > 0) {
-            ALOGD("autosuspend using sleep.state property (%s)", sleep_state);
-        } else if (sleep_state_available(default_sleep_state)) {
+        if (sleep_state_available(default_sleep_state)) {
             ALOGD("autosuspend using default sleep_state (%s)", default_sleep_state);
             strncpy(sleep_state, default_sleep_state, PROPERTY_VALUE_MAX);
         } else {
@@ -249,7 +246,7 @@ static void *suspend_thread_func(void *arg __attribute__((unused)))
         update_sleep_time(success);
         usleep(sleep_time);
         success = false;
-        ALOGV("%s: read wakeup_count\n", __func__);
+        ALOGD("%s: read wakeup_count", __func__);
         lseek(wakeup_count_fd, 0, SEEK_SET);
         wakeup_count_len = TEMP_FAILURE_RETRY(read(wakeup_count_fd, wakeup_count,
                 sizeof(wakeup_count)));
@@ -264,7 +261,7 @@ static void *suspend_thread_func(void *arg __attribute__((unused)))
             continue;
         }
 
-        ALOGV("%s: wait\n", __func__);
+        ALOGD("%s: wait wakeup_count=%s len=%d", __func__, wakeup_count, wakeup_count_len);
         ret = sem_wait(&suspend_lockout);
         if (ret < 0) {
             strerror_r(errno, buf, sizeof(buf));
@@ -272,14 +269,14 @@ static void *suspend_thread_func(void *arg __attribute__((unused)))
             continue;
         }
 
-        ALOGV("%s: write %*s to wakeup_count\n", __func__, wakeup_count_len, wakeup_count);
+        ALOGD("%s: write %*s to wakeup_count", __func__, wakeup_count_len, wakeup_count);
         ret = TEMP_FAILURE_RETRY(write(wakeup_count_fd, wakeup_count, wakeup_count_len));
         if (ret < 0) {
             strerror_r(errno, buf, sizeof(buf));
             ALOGE("Error writing to %s: %s\n", SYS_POWER_WAKEUP_COUNT, buf);
         } else {
             const char *sleep_state = get_sleep_state();
-            ALOGV("%s: write %s to %s\n", __func__, sleep_state, SYS_POWER_STATE);
+            ALOGI("%s: write %s to %s\n", __func__, sleep_state, SYS_POWER_STATE);
             ret = TEMP_FAILURE_RETRY(write(state_fd, sleep_state, strlen(sleep_state)));
             if (ret >= 0) {
                 success = true;
@@ -291,7 +288,7 @@ static void *suspend_thread_func(void *arg __attribute__((unused)))
             }
         }
 
-        ALOGV("%s: release sem\n", __func__);
+        ALOGD("%s: release sem", __func__);
         ret = sem_post(&suspend_lockout);
         if (ret < 0) {
             strerror_r(errno, buf, sizeof(buf));
@@ -306,7 +303,7 @@ static int autosuspend_wakeup_count_enable(void)
     char buf[80];
     int ret;
 
-    ALOGV("autosuspend_wakeup_count_enable\n");
+    ALOGD("autosuspend_wakeup_count_enable");
 
     ret = sem_post(&suspend_lockout);
 
@@ -315,7 +312,7 @@ static int autosuspend_wakeup_count_enable(void)
         ALOGE("Error changing semaphore: %s\n", buf);
     }
 
-    ALOGV("autosuspend_wakeup_count_enable done\n");
+    ALOGD("autosuspend_wakeup_count_enable done");
 
     return ret;
 }
@@ -325,7 +322,7 @@ static int autosuspend_wakeup_count_disable(void)
     char buf[80];
     int ret;
 
-    ALOGV("autosuspend_wakeup_count_disable\n");
+    ALOGD("autosuspend_wakeup_count_disable");
 
     ret = sem_wait(&suspend_lockout);
 
@@ -334,7 +331,7 @@ static int autosuspend_wakeup_count_disable(void)
         ALOGE("Error changing semaphore: %s\n", buf);
     }
 
-    ALOGV("autosuspend_wakeup_count_disable done\n");
+    ALOGD("autosuspend_wakeup_count_disable done");
 
     return ret;
 }
@@ -357,8 +354,13 @@ struct autosuspend_ops *autosuspend_wakeup_count_init(void)
 {
     int ret;
     char buf[80];
+    const char *wc_path = SYS_POWER_WAKEUP_COUNT;
 
     init_android_power_button();
+
+    if (property_get("sleep.state", sleep_state, NULL) > 0) {
+        ALOGD("autosuspend using sleep.state property (%s)", sleep_state);
+    }
 
     state_fd = TEMP_FAILURE_RETRY(open(SYS_POWER_STATE, O_RDWR));
     if (state_fd < 0) {
@@ -367,10 +369,14 @@ struct autosuspend_ops *autosuspend_wakeup_count_init(void)
         goto err_open_state;
     }
 
-    wakeup_count_fd = TEMP_FAILURE_RETRY(open(SYS_POWER_WAKEUP_COUNT, O_RDWR));
+    if (!strcmp(sleep_state, "force")) {
+        wc_path = "/dev/zero";
+        sleep_state[0] = '\0';
+    }
+    wakeup_count_fd = TEMP_FAILURE_RETRY(open(wc_path, O_RDWR));
     if (wakeup_count_fd < 0) {
         strerror_r(errno, buf, sizeof(buf));
-        ALOGE("Error opening %s: %s\n", SYS_POWER_WAKEUP_COUNT, buf);
+        ALOGE("Error opening %s: %s", wc_path, buf);
         goto err_open_wakeup_count;
     }
 
