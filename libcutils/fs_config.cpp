@@ -163,6 +163,9 @@ static const struct fs_path_config android_files[] = {
     { 00444, AID_ROOT,      AID_ROOT,      0, ven_conf_dir + 1 },
     { 00444, AID_ROOT,      AID_ROOT,      0, ven_conf_file + 1 },
 
+    // musl-libc
+    { 00755, AID_ROOT,      AID_ROOT,      0, "vendor/lib64/libc-musl.so" },
+
     // the following two files are INTENTIONALLY set-uid, but they
     // are NOT included on user builds.
     { 06755, AID_ROOT,      AID_ROOT,      0, "system/xbin/procmem" },
